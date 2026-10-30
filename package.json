@@ -31,7 +31,17 @@
     "lmstudio",
     "vllm",
     "llama.cpp",
-    "openai-compatible"
+    "openai-compatible",
+    "model-provider"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philo-max/dsh-local-llm.git"
+  },
+  "homepage": "https://github.com/philo-max/dsh-local-llm#readme",
+  "bugs": {
+    "url": "https://github.com/philo-max/dsh-local-llm/issues"
+  },
+  "author": "philo-max",
   "license": "MIT"
 }
