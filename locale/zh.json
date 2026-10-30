@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "title": "本地模型桥接",
+    "description": "自动探测并注册本机 OpenAI 兼容模型服务（LM Studio、Ollama、vLLM、llama.cpp），包含上下文长度探测。"
+  },
+  "tools": {
+    "scan": {
+      "title": "扫描本地模型服务",
+      "description": "探测常见本地端口上的 OpenAI 兼容模型服务。"
+    },
+    "register": {
+      "title": "注册本地提供商",
+      "description": "为探测到的本地服务写入可用的提供商配置。"
+    }
+  }
+}

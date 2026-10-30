@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "title": "Local LLM Bridge",
+    "description": "Detects and registers local OpenAI-compatible model servers (LM Studio, Ollama, vLLM, llama.cpp) as Harness providers, including context-length probing."
+  },
+  "tools": {
+    "scan": {
+      "title": "Scan local LLM servers",
+      "description": "Probe well-known local ports for OpenAI-compatible model servers."
+    },
+    "register": {
+      "title": "Register local provider",
+      "description": "Write a working provider entry for a detected local server."
+    }
+  }
+}

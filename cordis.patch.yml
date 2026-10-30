@@ -1,0 +1,5 @@
+# Insert the local LLM helper rows. The plugin itself registers tools at
+# activation; the patch only mounts it.
+- insert:
+    - id: local-llm
+      name: 'dsh-local-llm'

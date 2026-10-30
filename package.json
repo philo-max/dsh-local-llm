@@ -1,0 +1,37 @@
+{
+  "name": "dsh-local-llm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Detect, probe and register local OpenAI-compatible LLM servers (LM Studio, Ollama, vLLM, llama.cpp) as DeepSeek Harness model providers.",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "llm",
+    "local-llm",
+    "ollama",
+    "lmstudio",
+    "vllm",
+    "llama.cpp",
+    "openai-compatible"
+  ],
+  "license": "MIT"
+}
