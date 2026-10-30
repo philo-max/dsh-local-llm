@@ -62,7 +62,7 @@ Changes take effect on the **next model request** — no restart.
 ## Install
 
 ```bash
-git clone https://github.com/<you>/dsh-local-llm
+git clone https://github.com/philo-max/dsh-local-llm
 ```
 
 Then install the directory as a bundle in the Harness profile. The plugin mounts itself through `cordis.patch.yml`; no manual profile editing is required.
