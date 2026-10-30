@@ -18,10 +18,20 @@ request (30228 tokens) exceeds the available context size (8192 tokens)
 
 Both are detectable *before* writing configuration. This plugin probes for them and writes only the switches the endpoint actually needs.
 
+## Settings panel
+
+The bundle also adds **Settings → Local LLM**: enter a host and ports, scan, and
+each endpoint appears as a card showing its vendor, loaded/max context window,
+and tool-calling support. Pick a model and click **Register as provider** — no
+hand-written YAML.
+
+The panel talks to the Host through two same-origin routes registered on
+`ctx.webServer` (`/local-llm/scan`, `/local-llm/register`), because a plain-JS
+Client module cannot call Host services directly.
+
 ## Tools
 
 ### `local_llm_scan`
-
 Probe well-known ports for reachable servers.
 
 | Argument | Type | Default | Meaning |
