@@ -289,13 +289,13 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots'],
       apply(ctx) {
-        const t = (ctx.locale && typeof ctx.locale.bind === 'function')
-          ? ctx.locale.bind('local-llm')
-          : null;
-        const label = t
-          ? () => t('title', 'Local LLM')
-          : () => '本地模型';
+        const label = () => '本地模型';
 
+        // ctx.slots.inject already owns the effect lifetime: it disposes the
+        // registration when the slot declaration collapses and reinstalls it
+        // when the declaration returns. Wrapping it in ctx.effect adds a
+        // second owner for the same registration, and ctx.effect takes only one
+        // argument, so the label string would be ignored anyway.
         ctx.slots.inject('settings.section', () =>
           ctx.slots.register(
             { name: 'settings.section', id: 'local-llm', order: 12, label },

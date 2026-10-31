@@ -518,6 +518,17 @@ async function applyRegistration(ctx, args) {
 
 export const inject = ['tools'];
 
+/**
+ * The Config surface the Loader and Settings read.
+ *
+ * The Host projects this as JSON Schema: `listConfigs` returns it verbatim
+ * alongside `status: "schema"`. A schemastery-style `dict`/`refs` node set
+ * reads as `status: "unsupported"` instead, and the row's config stops being
+ * editable — so this stays plain JSON Schema.
+ *
+ * `~standard.validate` must exist and must never throw: a rejected config here
+ * would take the whole entry down at boot.
+ */
 const CONFIG_SCHEMA = {
   type: 'object',
   properties: {
@@ -535,7 +546,6 @@ const CONFIG_SCHEMA = {
 
 export const Config = {
   ...CONFIG_SCHEMA,
-  dict: CONFIG_SCHEMA.properties,
   meta: { default: {} },
   toJSON() {
     return CONFIG_SCHEMA;
