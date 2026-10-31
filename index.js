@@ -232,11 +232,101 @@ async function runScan({ ports, host, probe, apiKey }) {
   return { endpoints: found, probed: probe };
 }
 
+// --- progress anchor ------------------------------------------------------
+//
+// Compaction rewrites older history into a summary, and a small model's summary
+// reliably loses "what I was doing next". A better summary helps, but the
+// durable fix is a smaller surface: keep the plan on disk and re-inject it each
+// step, so the model re-reads its own intent instead of recalling it. This
+// mirrors the file-planning pattern (task_plan.md / progress.md) that agents
+// already use, and costs one small context block per request.
+//
+// Opt-in through Config.anchor.enabled: a deployment that never writes those
+// files should not pay for the read.
+
+const ANCHOR_FILES = ['task_plan.md', 'progress.md', 'findings.md'];
+
+async function readAnchorFiles(cwd, maxBytesPerFile, maxAgeDays) {
+  const fs = await import('node:fs/promises');
+  const path = await import('node:path');
+  const out = [];
+  const now = Date.now();
+  for (const name of ANCHOR_FILES) {
+    try {
+      const full = path.join(cwd, name);
+      const stat = await fs.stat(full);
+      if (!stat.isFile()) continue;
+      // A stale plan is worse than none: it states a finished task as current
+      // and sends the model back to work that is already done.
+      if (maxAgeDays > 0 && now - stat.mtimeMs > maxAgeDays * 86400000) continue;
+      const raw = await fs.readFile(full, 'utf8');
+      const text = raw.length > maxBytesPerFile ? raw.slice(-maxBytesPerFile) : raw;
+      out.push({
+        name,
+        text: text.trim(),
+        truncated: raw.length > maxBytesPerFile,
+        ageDays: Math.floor((now - stat.mtimeMs) / 86400000),
+      });
+    } catch {
+      /* absent or unreadable: skip */
+    }
+  }
+  return out;
+}
+
+function formatAnchor(files, cwd) {
+  if (files.length === 0) return '';
+  const body = files
+    .map((f) => {
+      const note = f.truncated ? ' (tail, truncated)' : '';
+      return `### ${f.name}${note}\n${f.text}`;
+    })
+    .join('\n\n');
+  return [
+    `Working notes from ${cwd}. Treat these as the authoritative statement of`,
+    'what this task is and where it stands: continue from the "next" items',
+    'rather than restarting work already marked done.',
+    '',
+    body,
+  ].join('\n');
+}
+
 export function apply(ctx, config = {}) {
+  const anchorCfg = config.anchor && typeof config.anchor === 'object' ? config.anchor : {};
+  const anchorEnabled = anchorCfg.enabled === true;
+  const anchorMaxBytes = Number.isFinite(anchorCfg.maxBytesPerFile) ? anchorCfg.maxBytesPerFile : 4000;
+  const anchorOrder = Number.isFinite(anchorCfg.order) ? anchorCfg.order : 60;
+  const anchorMaxAgeDays = Number.isFinite(anchorCfg.maxAgeDays) ? anchorCfg.maxAgeDays : 7;
   const defaultPorts =
     Array.isArray(config.ports) && config.ports.length > 0 ? config.ports : DEFAULT_PORTS;
   const defaultHost = typeof config.host === 'string' && config.host ? config.host : '127.0.0.1';
   const defaultProbe = config.probe === true;
+
+  // Progress anchor: re-inject the on-disk plan before each step so a compacted
+  // conversation still knows what it was doing.
+  if (anchorEnabled) {
+    ctx.effect(() => {
+      const prompt = ctx.get('systemPrompt');
+      const wd = ctx.get('workingDirectory');
+      if (!prompt || !wd) return () => {};
+
+      return prompt.context({
+        name: 'local-llm/anchor',
+        order: anchorOrder,
+        async text(assemble) {
+          const agent = assemble && assemble.agent;
+          if (!agent) return '';
+          try {
+            const cwd = await wd.ensure(agent);
+            const files = await readAnchorFiles(cwd, anchorMaxBytes, anchorMaxAgeDays);
+            return formatAnchor(files, cwd);
+          } catch {
+            return '';
+          }
+        },
+      });
+    });
+  }
 
   ctx.effect(() => {
     const disposers = [];
@@ -540,6 +630,29 @@ const CONFIG_SCHEMA = {
     host: { type: 'string', description: 'Default host to probe.' },
     probe: { type: 'boolean', description: 'Run capability probes by default instead of listing models only.' },
     timeoutMs: { type: 'integer', minimum: 100, description: 'Per-request timeout for probes.' },
+    anchor: {
+      type: 'object',
+      description:
+        'Re-inject the workspace plan files (task_plan.md, progress.md, findings.md) into the prompt ' +
+        'before every step, so a compacted conversation still knows what it was doing.',
+      properties: {
+        enabled: { type: 'boolean', description: 'Turn the progress anchor on.' },
+        maxBytesPerFile: {
+          type: 'integer',
+          minimum: 200,
+          description: 'Keep only the tail of a file longer than this. Defaults to 4000.',
+        },
+        order: { type: 'integer', description: 'Prompt context ordering. Defaults to 60.' },
+        maxAgeDays: {
+          type: 'integer',
+          minimum: 0,
+          description:
+            'Skip files older than this many days, so a finished task is not presented as current. ' +
+            'Defaults to 7; 0 disables the check.',
+        },
+      },
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 };
